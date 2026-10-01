@@ -20,14 +20,29 @@ STATUSES = ["待组织", "已组织", "已完成", "已复盘"]
 def list_entries(
     keyword: str | None = Query(default=None, description="按演练编号检索"),
     status: str | None = Query(default=None, description="待组织、已组织、已完成、已复盘"),
+    unit: str | None = Query(default=None, description="按参与单位精确过滤"),
+    theme: str | None = Query(default=None, description="按演练主题精确过滤"),
     page: int = 1,
     size: int = 20,
 ) -> PageResult[dict]:
-    """按演练编号与状态过滤应急演练列表；没有数据时返回空页，不报错。"""
+    """按演练编号、状态、参与单位与演练主题过滤应急演练列表；没有数据时返回空页，不报错。"""
     if size > 200:
         raise HTTPException(status_code=400, detail="每页最多 200 条，请缩小分页范围")
-    items, total = service.list_entries(keyword=keyword, status=status, page=page, size=size)
+    items, total = service.list_entries(keyword=keyword, status=status, unit=unit, theme=theme, page=page, size=size)
     return PageResult(items=items, total=total, page=page, size=size)
+
+
+@router.get("/matrix")
+def drill_matrix() -> dict[str, Any]:
+    """概览矩阵：行是参与单位、列是演练主题，格子里是演练次数与待落实改进措施数。"""
+    return service.matrix()
+
+
+@router.get("/export")
+def export_entries() -> dict[str, Any]:
+    """导出应急演练清单：返回当前过滤条件下的全量数据。"""
+    items, total = service.list_entries(page=1, size=10000)
+    return {"module": "emergency", "total": total, "items": items}
 
 
 @router.get("/{entry_id}", response_model=dict)
@@ -41,7 +56,7 @@ def get_entry(entry_id: int) -> dict:
 
 @router.post("", response_model=ActionResult)
 def create_entry(payload: EntryPayload) -> ActionResult:
-    """登记一条演练记录，缺字段时说明原因而不是静默丢弃。"""
+    """登记一条演练记录，缺字段时说明原因而不是静默丢弃；演练编号留空时自动编号。"""
     entry, missing = service.create_entry(payload.values)
     if missing:
         return ActionResult(ok=False, message=f"缺少必填字段：{'、'.join(missing)}")
@@ -56,10 +71,3 @@ def run_action(entry_id: int, payload: EntryPayload) -> ActionResult:
     if entry is None:
         return ActionResult(ok=False, message=message)
     return ActionResult(ok=True, message=message, entry=entry)
-
-
-@router.get("/export")
-def export_entries() -> dict[str, Any]:
-    """导出应急演练清单：返回当前过滤条件下的全量数据。"""
-    items, total = service.list_entries(page=1, size=10000)
-    return {"module": "emergency", "total": total, "items": items}

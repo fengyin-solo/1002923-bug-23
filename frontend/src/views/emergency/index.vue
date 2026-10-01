@@ -3,7 +3,7 @@
     <header class="page-head">
       <div>
         <h2>应急演练管理</h2>
-        <p class="page-desc">维护演练记录，围绕演练编号、演练主题、演练类型、参与单位做登记、筛选与状态流转。</p>
+        <p class="page-desc">维护演练记录，围绕演练编号、演练主题、演练类型、参与单位做登记、筛选与状态流转；概览矩阵按单位与主题铺开，便于发现缺口。</p>
       </div>
       <div class="page-actions">
         <button class="btn primary" type="button" @click="openCreate">登记演练记录</button>
@@ -11,54 +11,71 @@
       </div>
     </header>
 
-    <div class="stat-row">
-      <article v-for="item in stats" :key="item.label" class="stat-card">
-        <span class="stat-label">{{ item.label }}</span>
-        <strong class="stat-value">{{ item.value }}</strong>
-      </article>
-    </div>
+    <nav class="view-switch">
+      <button
+        v-for="item in views"
+        :key="item.key"
+        class="view-tab"
+        :class="{ active: view === item.key }"
+        type="button"
+        @click="switchView(item.key)"
+      >
+        {{ item.label }}
+      </button>
+    </nav>
 
-    <form class="filter-bar" @submit.prevent="reload">
-      <label v-for="field in filterFields" :key="field" class="filter-item">
-        <span>{{ field }}</span>
-        <input v-model="filters[field]" :placeholder="`按${field}检索`" />
-      </label>
-      <button class="btn" type="submit">查询</button>
-      <button class="btn ghost" type="button" @click="resetFilters">重置条件</button>
-    </form>
+    <MatrixView v-if="view === 'matrix'" />
 
-    <table class="data-table">
-      <thead>
-        <tr>
-          <th v-for="column in columns" :key="column">{{ column }}</th>
-          <th>可执行动作</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="row in rows" :key="String(row.id)">
-          <td v-for="column in columns" :key="column">{{ row[column] ?? '—' }}</td>
-          <td class="row-actions">
-            <button
-              v-for="action in actions"
-              :key="action"
-              class="link"
-              type="button"
-              @click="runAction(action, row)"
-            >
-              {{ action }}
-            </button>
-          </td>
-        </tr>
-        <tr v-if="!rows.length">
-          <td :colspan="columns.length + 1" class="empty-state">暂无应急演练数据，可先登记演练记录</td>
-        </tr>
-      </tbody>
-    </table>
+    <template v-else>
+      <div class="stat-row">
+        <article v-for="item in stats" :key="item.label" class="stat-card">
+          <span class="stat-label">{{ item.label }}</span>
+          <strong class="stat-value">{{ item.value }}</strong>
+        </article>
+      </div>
 
-    <footer class="page-foot">
-      <span>共 {{ total }} 条应急演练记录</span>
-      <span v-if="errorMessage" class="error-text">{{ errorMessage }}</span>
-    </footer>
+      <form class="filter-bar" @submit.prevent="reload">
+        <label v-for="field in filterFields" :key="field" class="filter-item">
+          <span>{{ field }}</span>
+          <input v-model="filters[field]" :placeholder="`按${field}检索`" />
+        </label>
+        <button class="btn" type="submit">查询</button>
+        <button class="btn ghost" type="button" @click="resetFilters">重置条件</button>
+      </form>
+
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th v-for="column in columns" :key="column">{{ column }}</th>
+            <th>可执行动作</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="row in rows" :key="String(row.id)">
+            <td v-for="column in columns" :key="column">{{ row[column] ?? '—' }}</td>
+            <td class="row-actions">
+              <button
+                v-for="action in actions"
+                :key="action"
+                class="link"
+                type="button"
+                @click="runAction(action, row)"
+              >
+                {{ action }}
+              </button>
+            </td>
+          </tr>
+          <tr v-if="!rows.length">
+            <td :colspan="columns.length + 1" class="empty-state">暂无应急演练数据，可先登记演练记录</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <footer class="page-foot">
+        <span>共 {{ total }} 条应急演练记录</span>
+        <span v-if="errorMessage" class="error-text">{{ errorMessage }}</span>
+      </footer>
+    </template>
   </section>
 </template>
 
@@ -67,19 +84,33 @@ import { onMounted, ref } from 'vue'
 
 import { request } from '@/api/client'
 
+import MatrixView from './matrix.vue'
+
 type Row = Record<string, string | number | null>
+type ViewKey = 'list' | 'matrix'
 
 const ENDPOINT = '/api/emergency'
+const VIEW_KEY = 'emergency:view'
 const columns = ["演练编号", "演练主题", "演练类型", "参与单位", "演练日期", "演练评估", "改进措施", "演练状态"]
 const actions = ["组织演练", "完成演练", "复盘总结"]
 const statuses = ["待组织", "已组织", "已完成", "已复盘"]
 const stats = [{"label": "待组织演练", "value": 0}, {"label": "已完成演练", "value": 0}, {"label": "已复盘演练", "value": 0}]
+const views: { key: ViewKey; label: string }[] = [
+  { key: 'list', label: '演练列表' },
+  { key: 'matrix', label: '概览矩阵' },
+]
 
+const view = ref<ViewKey>(sessionStorage.getItem(VIEW_KEY) === 'matrix' ? 'matrix' : 'list')
 const rows = ref<Row[]>([])
 const total = ref(0)
 const errorMessage = ref('')
 const filters = ref<Record<string, string>>({})
 const filterFields = columns.slice(0, 3)
+
+function switchView(next: ViewKey) {
+  view.value = next
+  sessionStorage.setItem(VIEW_KEY, next)
+}
 
 function resetFilters() {
   filters.value = {}
@@ -128,3 +159,25 @@ async function reload() {
 
 onMounted(reload)
 </script>
+
+<style scoped>
+.view-switch {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.view-tab {
+  border: 1px solid var(--border);
+  background: #fff;
+  border-radius: 6px;
+  padding: 6px 14px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--muted);
+}
+.view-tab.active {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: #fff;
+}
+</style>
