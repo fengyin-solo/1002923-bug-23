@@ -33,3 +33,31 @@ body { margin: 0; background: #f6f8fb; color: #1f2937; }
 .link { border: none; background: none; color: var(--brand); cursor: pointer; padding: 0; }
 .page-foot { display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px; color: var(--muted); }
 .error-text { color: #b42318; }
+
+/* 应急演练 · 概览矩阵 */
+.view-switch { display: inline-flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; margin-bottom: 12px; }
+.view-switch button { border: none; background: #fff; padding: 6px 14px; font-size: 13px; cursor: pointer; color: var(--muted); }
+.view-switch button.active { background: var(--brand); color: #fff; }
+.matrix-corner, .matrix-rowhead { background: #f8fafc; font-weight: 600; }
+.matrix-cell { cursor: pointer; text-align: center; min-width: 110px; }
+.matrix-cell:hover { background: #eef4ff; }
+.matrix-cell.selected { outline: 2px solid var(--brand); outline-offset: -2px; background: #eef4ff; }
+.matrix-cell.has-todo { background: #fff7ed; }
+.matrix-cell.has-todo:hover, .matrix-cell.has-todo.selected { background: #ffedd5; }
+.cell-count { font-weight: 600; }
+.cell-todo { display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 999px; background: #f97316; color: #fff; font-size: 12px; }
+.cell-empty { color: var(--muted); }
+.drill-panel { margin-top: 12px; background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 12px; }
+.drill-panel > header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.drill-panel h3 { margin: 0; font-size: 14px; }
+.panel-actions { display: flex; gap: 8px; }
+.todo-flag { color: #b45309; font-size: 12px; }
+.done-flag { color: #15803d; font-size: 12px; }
+.error-bar { display: flex; gap: 10px; align-items: center; background: #fef2f2; border: 1px solid #fecaca; color: #b42318; border-radius: 6px; padding: 8px 12px; margin-bottom: 12px; font-size: 13px; }
+.modal-mask { position: fixed; inset: 0; background: rgba(15, 23, 42, .45); display: flex; align-items: center; justify-content: center; z-index: 20; }
+.modal-card { background: #fff; border-radius: 8px; padding: 16px; width: 360px; display: flex; flex-direction: column; gap: 10px; }
+.modal-card h3 { margin: 0; font-size: 15px; }
+.modal-tip { margin: 0; font-size: 12px; color: var(--muted); }
+.modal-card label span { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+.modal-card input { width: 100%; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; }
+.modal-card footer { display: flex; justify-content: flex-end; gap: 8px; }

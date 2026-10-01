@@ -30,6 +30,25 @@ def list_entries(
     return PageResult(items=items, total=total, page=page, size=size)
 
 
+# 注意：/matrix 与 /export 必须放在 /{entry_id} 之前，否则会被当成 entry_id 匹配，
+# 字符串转 int 失败直接 422，矩阵和导出永远到不了这里。
+@router.get("/matrix")
+def matrix_overview() -> dict[str, Any]:
+    """概览矩阵：行是用人单位、列是演练主题，格子给演练次数与改进待办数。
+
+    与演练列表读同一份数据，口径一致；每个格子顺带带上该组合的演练明细，
+    前端点格子下钻时不必再发一次请求。
+    """
+    return service.matrix()
+
+
+@router.get("/export")
+def export_entries() -> dict[str, Any]:
+    """导出应急演练清单：返回当前过滤条件下的全量数据。"""
+    items, total = service.list_entries(page=1, size=10000)
+    return {"module": "emergency", "total": total, "items": items}
+
+
 @router.get("/{entry_id}", response_model=dict)
 def get_entry(entry_id: int) -> dict:
     """读取单条演练记录明细；不存在时给出可读的错误说明。"""
@@ -41,7 +60,7 @@ def get_entry(entry_id: int) -> dict:
 
 @router.post("", response_model=ActionResult)
 def create_entry(payload: EntryPayload) -> ActionResult:
-    """登记一条演练记录，缺字段时说明原因而不是静默丢弃。"""
+    """登记一条演练记录，缺字段时说明原因而不是静默丢弃；演练编号留空时自动顺延编号。"""
     entry, missing = service.create_entry(payload.values)
     if missing:
         return ActionResult(ok=False, message=f"缺少必填字段：{'、'.join(missing)}")
@@ -56,10 +75,3 @@ def run_action(entry_id: int, payload: EntryPayload) -> ActionResult:
     if entry is None:
         return ActionResult(ok=False, message=message)
     return ActionResult(ok=True, message=message, entry=entry)
-
-
-@router.get("/export")
-def export_entries() -> dict[str, Any]:
-    """导出应急演练清单：返回当前过滤条件下的全量数据。"""
-    items, total = service.list_entries(page=1, size=10000)
-    return {"module": "emergency", "total": total, "items": items}
